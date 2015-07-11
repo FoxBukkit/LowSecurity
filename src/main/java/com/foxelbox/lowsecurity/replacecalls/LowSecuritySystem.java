@@ -1,4 +1,4 @@
-package com.foxelbox.lowsecurity;
+package com.foxelbox.lowsecurity.replacecalls;
 
 public class LowSecuritySystem {
     private static SecurityManager _securityManager = null;

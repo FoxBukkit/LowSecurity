@@ -17,12 +17,28 @@
 
 package com.foxelbox.lowsecurity;
 
+import com.foxelbox.lowsecurity.patchsystem.ClassVisitorPatchSystem;
+import com.foxelbox.lowsecurity.replacecalls.ClassVisitorReplaceCalls;
+
 import java.lang.instrument.Instrumentation;
 
 public class LowSecurityPremain {
     public static void premain(String agentArgument, final Instrumentation instrumentation) {
-        System.out.println("Hotpatching: Patch System.setSecurityManager");
-        MyClassFileTransformer transformer = new LowSecurityClassVisitorPatchSystem.ClassTransformer();
+        MyClassFileTransformer transformer;
+
+        switch (agentArgument) {
+            case "patchsystem":
+                System.out.println("Hotpatching: Patch System.setSecurityManager");
+                transformer = new ClassVisitorPatchSystem.ClassTransformer();
+                break;
+            case "replacecalls":
+                System.out.println("Hotpatching: Patch all calls to System.{get,set}securityManager");
+                transformer = new ClassVisitorReplaceCalls.ClassTransformer();
+                break;
+            default:
+                throw new RuntimeException("No patch method specified");
+        }
+
         transformer.patch(instrumentation);
     }
 }
