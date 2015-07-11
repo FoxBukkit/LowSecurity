@@ -5,13 +5,37 @@ import org.objectweb.asm.*;
 
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 
 public class ClassVisitorReplaceCalls extends ClassVisitor {
     public static class ClassTransformer implements MyClassFileTransformer {
+        private static final String LOW_SECURITY_SYSTEM_CLASS = LowSecuritySystem.class.getName().replace('.', '/');
+        private static byte[] LOW_SECURITY_SYSTEM_BYTES = null;
+
         @Override
         public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-            if(!className.startsWith("java/") && !className.startsWith("com/sun/") && !className.startsWith("jdk/")) {
+            if(LOW_SECURITY_SYSTEM_BYTES == null && className.equals(LOW_SECURITY_SYSTEM_CLASS)) {
+                LOW_SECURITY_SYSTEM_BYTES = classfileBuffer;
+                return classfileBuffer;
+            }
+
+            if(!className.startsWith("java/") && !className.startsWith("com/sun/") && !className.startsWith("jdk/") && !className.startsWith("com/foxelbox/lowsecurity/") && !className.startsWith("javax/") && !className.startsWith("sun/")) {
+                if(loader != null) {
+                    try {
+                        loader.loadClass(LOW_SECURITY_SYSTEM_CLASS.replace('/', '.'));
+                    } catch (Exception e) {
+                        System.err.println("ClassLoader does not know LowSecuritySystem");
+                        try {
+                            Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
+                            defineClass.setAccessible(true);
+                            defineClass.invoke(loader, LOW_SECURITY_SYSTEM_BYTES, 0, LOW_SECURITY_SYSTEM_BYTES.length);
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+
                 ClassReader classReader = new ClassReader(classfileBuffer);
                 ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
                 ClassVisitorReplaceCalls lowSecurityClassVisitorPatchSystem = new ClassVisitorReplaceCalls(classWriter, className);
@@ -23,7 +47,12 @@ public class ClassVisitorReplaceCalls extends ClassVisitor {
 
         @Override
         public void patch(Instrumentation instrumentation) {
-            instrumentation.addTransformer(this);
+            try {
+                instrumentation.addTransformer(this, true);
+                instrumentation.retransformClasses(LowSecuritySystem.class);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
