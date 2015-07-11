@@ -20,19 +20,17 @@ public class ClassVisitorReplaceCalls extends ClassVisitor {
                 return classfileBuffer;
             }
 
-            if(!className.startsWith("java/") && !className.startsWith("com/sun/") && !className.startsWith("jdk/") && !className.startsWith("com/foxelbox/lowsecurity/") && !className.startsWith("javax/") && !className.startsWith("sun/")) {
-                if(loader != null) {
+            if(loader != null && !className.startsWith("java/") && !className.startsWith("com/sun/") && !className.startsWith("jdk/") && !className.startsWith("com/foxelbox/lowsecurity/") && !className.startsWith("javax/") && !className.startsWith("sun/")) {
+                try {
+                    loader.loadClass(LOW_SECURITY_SYSTEM_CLASS.replace('/', '.'));
+                } catch (Exception e) {
+                    System.err.println("ClassLoader does not know LowSecuritySystem");
                     try {
-                        loader.loadClass(LOW_SECURITY_SYSTEM_CLASS.replace('/', '.'));
-                    } catch (Exception e) {
-                        System.err.println("ClassLoader does not know LowSecuritySystem");
-                        try {
-                            Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
-                            defineClass.setAccessible(true);
-                            defineClass.invoke(loader, LOW_SECURITY_SYSTEM_BYTES, 0, LOW_SECURITY_SYSTEM_BYTES.length);
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
+                        Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", byte[].class, int.class, int.class);
+                        defineClass.setAccessible(true);
+                        defineClass.invoke(loader, LOW_SECURITY_SYSTEM_BYTES, 0, LOW_SECURITY_SYSTEM_BYTES.length);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
                     }
                 }
 
@@ -42,6 +40,7 @@ public class ClassVisitorReplaceCalls extends ClassVisitor {
                 classReader.accept(lowSecurityClassVisitorPatchSystem, 0);
                 return classWriter.toByteArray();
             }
+
             return classfileBuffer;
         }
 
