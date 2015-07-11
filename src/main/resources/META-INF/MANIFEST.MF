@@ -3,3 +3,6 @@ Premain-Class: com.foxelbox.lowsecurity.LowSecurityPremain
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Can-Set-Native-Method-Prefix: true
+
+Name: com/foxelbox/lowsecurity/
+Sealed: true
