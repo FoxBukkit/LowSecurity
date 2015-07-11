@@ -1,6 +1,9 @@
 package com.foxelbox.lowsecurity;
 
-import org.objectweb.asm.*;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Attribute;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.TypePath;
 
 public abstract class MethodReplacerVisitor extends MethodVisitor {
     protected final MethodVisitor mv;

@@ -14,38 +14,15 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with LowSecurity.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.foxelbox.lowsecurity;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
-import java.security.ProtectionDomain;
 
-public class LowSecurityPremain implements ClassFileTransformer {
+public class LowSecurityPremain {
     public static void premain(String agentArgument, final Instrumentation instrumentation) {
-        System.out.println("Hotpatching :)");
-        LowSecurityPremain transformer = new LowSecurityPremain();
-        instrumentation.addTransformer(transformer, true);
-        try {
-            instrumentation.retransformClasses(System.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        instrumentation.removeTransformer(transformer);
-    }
-
-    @Override
-    public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-        if(className.equals("java/lang/System")) {
-            ClassReader classReader = new ClassReader(classfileBuffer);
-            ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-            LowSecurityClassVisitor lowSecurityClassVisitor = new LowSecurityClassVisitor(classWriter);
-            classReader.accept(lowSecurityClassVisitor, 0);
-            return classWriter.toByteArray();
-        }
-        return classfileBuffer;
+        System.out.println("Hotpatching: Patch System.setSecurityManager");
+        MyClassFileTransformer transformer = new LowSecurityClassVisitorPatchSystem.ClassTransformer();
+        transformer.patch(instrumentation);
     }
 }

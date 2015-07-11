@@ -18,8 +18,37 @@ package com.foxelbox.lowsecurity;
 
 import org.objectweb.asm.*;
 
-public class LowSecurityClassVisitor extends ClassVisitor {
-    public LowSecurityClassVisitor(ClassVisitor classVisitor) {
+import java.lang.instrument.IllegalClassFormatException;
+import java.lang.instrument.Instrumentation;
+import java.security.ProtectionDomain;
+
+public class LowSecurityClassVisitorPatchSystem extends ClassVisitor {
+    public static class ClassTransformer implements MyClassFileTransformer {
+        @Override
+        public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+            if(className.equals("java/lang/System")) {
+                ClassReader classReader = new ClassReader(classfileBuffer);
+                ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                LowSecurityClassVisitorPatchSystem lowSecurityClassVisitorPatchSystem = new LowSecurityClassVisitorPatchSystem(classWriter);
+                classReader.accept(lowSecurityClassVisitorPatchSystem, 0);
+                return classWriter.toByteArray();
+            }
+            return classfileBuffer;
+        }
+
+        @Override
+        public void patch(Instrumentation instrumentation) {
+            instrumentation.addTransformer(this, true);
+            try {
+                instrumentation.retransformClasses(System.class);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            instrumentation.removeTransformer(this);
+        }
+    }
+
+    public LowSecurityClassVisitorPatchSystem(ClassVisitor classVisitor) {
         super(Opcodes.ASM5, classVisitor);
     }
 
