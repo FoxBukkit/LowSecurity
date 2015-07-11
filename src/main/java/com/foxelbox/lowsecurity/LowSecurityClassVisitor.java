@@ -16,40 +16,36 @@
  */
 package com.foxelbox.lowsecurity;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.*;
 
 public class LowSecurityClassVisitor extends ClassVisitor {
     public LowSecurityClassVisitor(ClassVisitor classVisitor) {
         super(Opcodes.ASM5, classVisitor);
     }
 
-    private static class MethodPatcherVisitor extends MethodVisitor {
-        public MethodPatcherVisitor(int api, MethodVisitor methodVisitor) {
+    private static class LowSecurityMethodReplacer extends MethodReplacerVisitor {
+        public LowSecurityMethodReplacer(int api, MethodVisitor methodVisitor) {
             super(api, methodVisitor);
         }
 
         @Override
-        public void visitCode() {
-            super.visitCode();
+        public void writeCode() {
+            mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
 
-            visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+            mv.visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
+            mv.visitInsn(Opcodes.DUP);
+            mv.visitLdcInsn("Prevented setting SecurityManager: ");
+            mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V", false);
 
-            visitTypeInsn(Opcodes.NEW, "java/lang/StringBuilder");
-            visitInsn(Opcodes.DUP);
-            visitLdcInsn("Prevented setting SecurityManager: ");
-            visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "(Ljava/lang/String;)V", false);
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/SecurityManager", "toString", "()Ljava/lang/String;", false);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
 
-            visitVarInsn(Opcodes.ALOAD, 0);
-            visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false);
-            visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
 
-            visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
 
-            visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
-
-            visitInsn(Opcodes.RETURN);
+            mv.visitInsn(Opcodes.RETURN);
         }
     }
 
@@ -57,7 +53,7 @@ public class LowSecurityClassVisitor extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
         if(name.equals("setSecurityManager")) {
-            return new MethodPatcherVisitor(api, mv);
+            return new LowSecurityMethodReplacer(api, mv);
         }
         return mv;
     }
