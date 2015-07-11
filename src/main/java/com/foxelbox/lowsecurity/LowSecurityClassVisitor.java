@@ -25,8 +25,8 @@ public class LowSecurityClassVisitor extends ClassVisitor {
         super(Opcodes.ASM5, classVisitor);
     }
 
-    private static class MethodClearingVisitor extends MethodVisitor {
-        public MethodClearingVisitor(int api, MethodVisitor methodVisitor) {
+    private static class MethodPatcherVisitor extends MethodVisitor {
+        public MethodPatcherVisitor(int api, MethodVisitor methodVisitor) {
             super(api, methodVisitor);
         }
 
@@ -57,7 +57,7 @@ public class LowSecurityClassVisitor extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
         if(name.equals("setSecurityManager")) {
-            return new MethodClearingVisitor(api, mv);
+            return new MethodPatcherVisitor(api, mv);
         }
         return mv;
     }
