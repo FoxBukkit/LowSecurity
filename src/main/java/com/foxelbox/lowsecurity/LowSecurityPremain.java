@@ -20,13 +20,28 @@ package com.foxelbox.lowsecurity;
 import com.foxelbox.lowsecurity.patchsystem.ClassVisitorPatchSystem;
 import com.foxelbox.lowsecurity.replacecalls.ClassVisitorReplaceCalls;
 
+import java.io.File;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.jar.JarFile;
 
 public class LowSecurityPremain {
     public static void premain(String agentArgument, final Instrumentation instrumentation) {
+
+        if(agentArgument.isEmpty()) {
+            throw new RuntimeException("No patch method specified");
+        }
+
+        final String[] arguments = agentArgument.split(",");
+        if(arguments.length < 1) {
+            throw new RuntimeException("No patch method specified");
+        }
+
         MyClassFileTransformer transformer;
 
-        switch (agentArgument) {
+        switch (arguments[0]) {
             case "patchsystem":
                 System.out.println("Hotpatching: Patch System.setSecurityManager");
                 transformer = new ClassVisitorPatchSystem.ClassTransformer();
@@ -40,5 +55,22 @@ public class LowSecurityPremain {
         }
 
         transformer.patch(instrumentation);
+
+        if(arguments.length > 1) {
+            for(int i = 1; i < arguments.length; i++) {
+                try {
+                    File nextFile = new File(arguments[i]);
+                    if (nextFile.exists()) {
+                        nextFile = nextFile.getAbsoluteFile();
+                        final String mainClass = new JarFile(nextFile).getManifest().getMainAttributes().getValue("Premain-Class");
+                        final URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{nextFile.toURI().toURL()});
+                        final Method m = urlClassLoader.loadClass(mainClass).getMethod("premain", String.class, Instrumentation.class);
+                        m.invoke(null, "", instrumentation);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
